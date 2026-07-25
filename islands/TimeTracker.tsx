@@ -102,7 +102,7 @@ export default function TimeTracker() {
 
   return (
     <div className="time-tracker space-y-6">
-      <div className="time-tracker__timer rounded-xl border border-[color:var(--color-border)] p-4">
+      <div className="time-tracker__timer rounded-xl border border-[color:var(--color-line)] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm opacity-70">Diese Woche</p>
