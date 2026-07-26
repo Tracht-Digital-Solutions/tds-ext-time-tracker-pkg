@@ -21,12 +21,12 @@ export default function WeekSummary() {
       .catch(() => setFailed(true));
   }, []);
 
-  if (failed) return <p className="widget__metric">–</p>;
-  if (data === null) return <p className="widget__metric">…</p>;
+  if (failed) return <p className="tds-widget__metric">–</p>;
+  if (data === null) return <p className="tds-widget__metric">…</p>;
 
   return (
     <div>
-      <p className="widget__metric">{data.weekHours.toLocaleString("de-DE")} h</p>
+      <p className="tds-widget__metric">{data.weekHours.toLocaleString("de-DE")} h</p>
       {data.running ? <p className="text-xs opacity-70">⏱ Timer läuft</p> : null}
     </div>
   );

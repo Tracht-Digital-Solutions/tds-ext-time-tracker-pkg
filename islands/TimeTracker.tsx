@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Spinner } from "@tracht-digital-solutions/tds-shared/components";
 
 interface Entry {
   id: number;
@@ -136,13 +137,13 @@ export default function TimeTracker() {
           <input value={manualNote} onChange={(e) => setManualNote(e.target.value)} placeholder="Notiz (optional)" />
           <button type="button" onClick={addManual} disabled={busy}>Hinzufügen</button>
         </div>
-        {status ? <p className="status-pill status-pill--info mt-2">{status}</p> : null}
+        {status ? <p className="tds-alert mt-2" role="status">{status}</p> : null}
       </details>
 
       <div className="time-tracker__list">
         <h3>Letzte Einträge</h3>
         {entries === null ? (
-          <p>Wird geladen …</p>
+          <p role="status"><Spinner /></p>
         ) : entries.length === 0 ? (
           <p className="text-sm opacity-70">Noch keine Einträge.</p>
         ) : (
@@ -153,7 +154,7 @@ export default function TimeTracker() {
                 {e.running ? <span className="chip chip--info">läuft</span> : null}
                 <span className="opacity-70">{e.started_at}{e.ended_at ? ` – ${e.ended_at}` : ""}</span>
                 {e.note ? <span className="opacity-70">· {e.note}</span> : null}
-                <button type="button" className="danger text-xs ml-auto" onClick={() => remove(e)}>Löschen</button>
+                <button type="button" className="btn btn-danger text-xs ml-auto" onClick={() => remove(e)}>Löschen</button>
               </li>
             ))}
           </ul>
