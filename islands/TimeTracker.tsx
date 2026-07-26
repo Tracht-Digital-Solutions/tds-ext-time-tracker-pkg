@@ -140,7 +140,7 @@ export default function TimeTracker() {
         {status ? <p className="tds-alert mt-2" role="status">{status}</p> : null}
       </details>
 
-      <div className="time-tracker__list">
+      <div className="tds-stack">
         <h3>Letzte Einträge</h3>
         {entries === null ? (
           <p role="status"><Spinner /></p>
