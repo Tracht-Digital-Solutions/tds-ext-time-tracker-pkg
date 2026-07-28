@@ -51,8 +51,30 @@ The first TDS frontend **extension** and the reference for `frontend-contract`. 
 
 ```bash
 npm run build && npm run type-check
+npm run test:run                    # vitest (69 tests)
 composer install && composer test   # (no PHP tests yet)
 ```
+
+## Tests
+
+`npm run test:run` (vitest; jsdom per-file via a `@vitest-environment` docblock).
+
+- `islands/TimeTracker.test.tsx` — the timer, manual entries and the list. The
+  start and stop controls are mutually exclusive by construction (both derive
+  from `summary.running`); rendering both would let a user start a second timer
+  over a running one, so that is pinned. `fmt()` is covered at its boundaries
+  (0m, 45m, 2h 0m, 1h 30m) — the `2h 0m` case is the one that catches a "drop
+  the minutes when they are zero" regression.
+- `islands/WeekSummary.test.tsx` — the widget's three states. The distinction
+  between **failed** and **zero** is the point: rendering `0 h` on a failed
+  request asserts the user tracked nothing this week, which is a different and
+  wrong claim. It must render `–`.
+
+Error-path tests deliberately return a POPULATED body with their non-OK status.
+Against an empty error body, `r.ok ? r.json() : { entries: [] }` and a bare
+`r.json()` end up identical, so the test would pass with the ok-check deleted.
+
+Verified by mutation: 16 deliberate breakages introduced, 16 caught.
 
 ## After a change
 
