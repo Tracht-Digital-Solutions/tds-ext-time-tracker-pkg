@@ -110,11 +110,33 @@ export default function TimeTracker() {
             <p className="text-2xl font-semibold">{(summary?.weekHours ?? 0).toLocaleString("de-DE")} h</p>
           </div>
           {running ? (
-            <button type="button" onClick={stop} disabled={busy}>⏹ Timer stoppen</button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={stop}
+              disabled={busy}
+              aria-busy={busy}
+            >
+              ⏹ Timer stoppen
+            </button>
           ) : (
-            <div className="flex gap-2">
-              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Woran arbeitest du?" />
-              <button type="button" onClick={start} disabled={busy}>▶ Timer starten</button>
+            <div className="tds-toolbar">
+              <input
+                className="field-boxed"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Woran arbeitest du?"
+                aria-label="Woran arbeitest du?"
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={start}
+                disabled={busy}
+                aria-busy={busy}
+              >
+                ▶ Timer starten
+              </button>
             </div>
           )}
         </div>
@@ -125,17 +147,31 @@ export default function TimeTracker() {
 
       <details className="time-tracker__manual">
         <summary>Eintrag manuell erfassen</summary>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <label className="text-sm">
+        <div className="tds-toolbar mt-3">
+          <label className="tds-field-row">
             Start
-            <input type="datetime-local" value={manualStart} onChange={(e) => setManualStart(e.target.value)} />
+            <input className="field-boxed" type="datetime-local" value={manualStart} onChange={(e) => setManualStart(e.target.value)} />
           </label>
-          <label className="text-sm">
+          <label className="tds-field-row">
             Ende
-            <input type="datetime-local" value={manualEnd} onChange={(e) => setManualEnd(e.target.value)} />
+            <input className="field-boxed" type="datetime-local" value={manualEnd} onChange={(e) => setManualEnd(e.target.value)} />
           </label>
-          <input value={manualNote} onChange={(e) => setManualNote(e.target.value)} placeholder="Notiz (optional)" />
-          <button type="button" onClick={addManual} disabled={busy}>Hinzufügen</button>
+          <input
+            className="field-boxed"
+            value={manualNote}
+            onChange={(e) => setManualNote(e.target.value)}
+            placeholder="Notiz (optional)"
+            aria-label="Notiz"
+          />
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={addManual}
+            disabled={busy}
+            aria-busy={busy}
+          >
+            Hinzufügen
+          </button>
         </div>
         {status ? <p className="tds-alert mt-2" role="status">{status}</p> : null}
       </details>
