@@ -83,6 +83,6 @@ describe("the widget", () => {
 
   it("shows a placeholder before the request resolves", () => {
     render(<WeekSummary />);
-    expect(screen.getByText("…")).toBeTruthy();
+    expect(document.querySelector('[aria-busy="true"]')).toBeTruthy();
   });
 });

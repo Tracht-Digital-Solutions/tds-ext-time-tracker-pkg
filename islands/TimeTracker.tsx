@@ -143,7 +143,7 @@ export default function TimeTracker() {
       <div className="tds-stack">
         <h3>Letzte Einträge</h3>
         {entries === null ? (
-          <p role="status"><Spinner /></p>
+          <p><Spinner /></p>
         ) : entries.length === 0 ? (
           <p className="text-sm opacity-70">Noch keine Einträge.</p>
         ) : (

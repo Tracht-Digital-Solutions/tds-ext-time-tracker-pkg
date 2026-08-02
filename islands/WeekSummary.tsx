@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Skeleton } from "@tracht-digital-solutions/tds-shared/components";
 
 interface Summary {
   weekHours: number;
@@ -22,7 +23,7 @@ export default function WeekSummary() {
   }, []);
 
   if (failed) return <p className="tds-widget__metric">–</p>;
-  if (data === null) return <p className="tds-widget__metric">…</p>;
+  if (data === null) return <p className="tds-widget__metric" aria-busy="true"><Skeleton width="3ch" height="1.75rem" /></p>;
 
   return (
     <div>
