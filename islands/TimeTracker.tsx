@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Spinner } from "@tracht-digital-solutions/tds-shared/components";
+import { Spinner, toast } from "@tracht-digital-solutions/tds-shared/components";
 
 interface Entry {
   id: number;
@@ -52,23 +52,45 @@ export default function TimeTracker() {
     void load();
   }, []);
 
+  // start/stop/remove used to discard their responses. That is worse here than
+  // a missing confirmation: a stop that never reached the server leaves the
+  // timer running, and a delete that failed makes the row reappear on the next
+  // load with no explanation. Tracked time is data — a silent loss is a wrong
+  // invoice later.
   const start = async () => {
     setBusy(true);
-    await api("/time/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ note: note.trim() }),
-    });
-    setNote("");
-    setBusy(false);
-    void load();
+    try {
+      const res = await api("/time/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: note.trim() }),
+      });
+      if (res.ok) {
+        setNote("");
+        toast.success("Timer gestartet.");
+      } else {
+        toast.danger(`Timer konnte nicht gestartet werden (HTTP ${res.status}).`);
+      }
+    } catch {
+      toast.danger("Timer konnte nicht gestartet werden — die API ist nicht erreichbar.");
+    } finally {
+      setBusy(false);
+      void load();
+    }
   };
 
   const stop = async () => {
     setBusy(true);
-    await api("/time/stop", { method: "POST" });
-    setBusy(false);
-    void load();
+    try {
+      const res = await api("/time/stop", { method: "POST" });
+      if (res.ok) toast.success("Timer gestoppt.");
+      else toast.danger(`Timer konnte nicht gestoppt werden (HTTP ${res.status}) — er läuft weiter.`);
+    } catch {
+      toast.danger("Timer konnte nicht gestoppt werden — die API ist nicht erreichbar.");
+    } finally {
+      setBusy(false);
+      void load();
+    }
   };
 
   const addManual = async () => {
@@ -88,15 +110,28 @@ export default function TimeTracker() {
       setManualEnd("");
       setManualNote("");
       setStatus(null);
+      toast.success("Eintrag gespeichert.");
       void load();
+    } else if (res.status === 422) {
+      // Validation stays IN THE FORM: it points at the fields the user still
+      // has to fix, and must not blend itself away while they read them.
+      setStatus("Ende muss nach dem Start liegen.");
     } else {
-      setStatus(res.status === 422 ? "Ende muss nach dem Start liegen." : `Fehler (HTTP ${res.status}).`);
+      setStatus(null);
+      toast.danger(`Eintrag konnte nicht gespeichert werden (HTTP ${res.status}).`);
     }
   };
 
   const remove = async (e: Entry) => {
-    await api(`/time/entries/${e.id}`, { method: "DELETE" });
-    void load();
+    try {
+      const res = await api(`/time/entries/${e.id}`, { method: "DELETE" });
+      if (res.ok) toast.success("Eintrag gelöscht.");
+      else toast.danger(`Löschen fehlgeschlagen (HTTP ${res.status}).`);
+    } catch {
+      toast.danger("Löschen fehlgeschlagen — die API ist nicht erreichbar.");
+    } finally {
+      void load();
+    }
   };
 
   const running = summary?.running ?? null;
@@ -173,7 +208,10 @@ export default function TimeTracker() {
             Hinzufügen
           </button>
         </div>
-        {status ? <p className="tds-alert mt-2" role="status">{status}</p> : null}
+        {/* Only validation reaches this now (the transient outcomes are
+            toasts), so it is a failure and gets the danger hue — it used to
+            render "Ende muss nach dem Start liegen." in the info blue. */}
+        {status ? <p className="tds-alert tds-alert--danger mt-2" role="alert">{status}</p> : null}
       </details>
 
       <div className="tds-stack">
