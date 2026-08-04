@@ -1,6 +1,6 @@
 {
   "name": "@tracht-digital-solutions/tds-ext-time-tracker",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Time-tracker extension for the TDS panel platform. Contributes the /time page, a dashboard widget, nav, a permission, a settings section and i18n via frontend-contract.",
   "license": "UNLICENSED",
   "private": false,
@@ -35,7 +35,7 @@
     "@tracht-digital-solutions/tds-frontend-contract": "^1.0.0"
   },
   "peerDependencies": {
-    "@tracht-digital-solutions/tds-shared": ">=0.14.0",
+    "@tracht-digital-solutions/tds-shared": ">=0.16.0",
     "astro": ">=6",
     "react": ">=18",
     "react-dom": ">=18"

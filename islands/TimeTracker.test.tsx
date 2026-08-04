@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import TimeTracker from "./TimeTracker";
+import { TOAST_EVENT } from "@tracht-digital-solutions/tds-shared/toast";
 
 /**
  * The time-tracker page: start/stop timer, manual entry, recent list.
@@ -24,9 +25,17 @@ function respond(match: RegExp, body: unknown, status = 200, method?: string) {
   });
 }
 
+/** Outcomes are toasts now, so they are collected off the `tds:toast` bus. */
+let toasts: Array<{ variant: string; message: string }> = [];
+const collectToast = (e: Event) => {
+  toasts.push((e as CustomEvent<{ variant: string; message: string }>).detail);
+};
+
 beforeEach(() => {
   handlers = [];
   calls = [];
+  toasts = [];
+  window.addEventListener(TOAST_EVENT, collectToast);
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -47,7 +56,10 @@ beforeEach(() => {
   );
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  window.removeEventListener(TOAST_EVENT, collectToast);
+  cleanup();
+});
 
 const user = () => userEvent.setup({ delay: null });
 
@@ -212,10 +224,15 @@ describe("manual entries", () => {
   });
 
   it("reports any other failure with its status", async () => {
+    // A non-validation failure is a transient outcome, so it left the form and
+    // became a toast; the status still has to travel, since it is what tells a
+    // 401 (session) from a 500 (service) apart.
     const u = await renderTracker();
     respond(/\/time\/entries$/, {}, 500, "POST");
     await fill(u, "2026-07-27T09:00", "2026-07-27T10:00");
-    expect(await screen.findByText("Fehler (HTTP 500).")).toBeTruthy();
+    await waitFor(() => expect(toasts.length).toBe(1));
+    expect(toasts[0]!.variant).toBe("danger");
+    expect(toasts[0]!.message).toContain("500");
   });
 
   it("clears the form and reloads after a successful add", async () => {
@@ -229,8 +246,38 @@ describe("manual entries", () => {
     const u = await renderTracker();
     respond(/\/time\/entries$/, {}, 500, "POST");
     await fill(u, "2026-07-27T09:00", "2026-07-27T10:00", "Notiz");
-    await screen.findByText("Fehler (HTTP 500).");
+    await waitFor(() => expect(toasts.length).toBe(1));
     expect((screen.getByPlaceholderText("Notiz (optional)") as HTMLInputElement).value).toBe("Notiz");
+  });
+
+  it("keeps validation in the form, where the fields are", async () => {
+    // 422 is the one case that must NOT auto-dismiss: it points at fields the
+    // user still has to correct.
+    const u = await renderTracker();
+    respond(/\/time\/entries$/, {}, 422, "POST");
+    await fill(u, "2026-07-27T10:00", "2026-07-27T09:00");
+    expect(await screen.findByText("Ende muss nach dem Start liegen.")).toBeTruthy();
+    expect(toasts).toEqual([]);
+  });
+});
+
+describe("silent mutations (regression)", () => {
+  // start/stop/remove used to discard their responses entirely. A stop that
+  // never reached the server leaves the timer running against the user's time.
+  it("reports a failed stop, and says the timer is still running", async () => {
+    await renderTracker({ weekHours: 2, running: { id: 1, started_at: "10:00", note: null } });
+    respond(/\/time\/stop$/, {}, 500, "POST");
+    await user().click(screen.getByRole("button", { name: /Timer stoppen/ }));
+    await waitFor(() => expect(toasts.length).toBe(1));
+    expect(toasts[0]!.variant).toBe("danger");
+    expect(toasts[0]!.message).toMatch(/läuft weiter/);
+  });
+
+  it("confirms a started timer", async () => {
+    const u = await renderTracker();
+    await u.click(screen.getByRole("button", { name: /Timer starten/ }));
+    await waitFor(() => expect(toasts.length).toBe(1));
+    expect(toasts[0]!.variant).toBe("success");
   });
 });
 

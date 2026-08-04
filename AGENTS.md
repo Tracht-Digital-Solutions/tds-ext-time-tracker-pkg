@@ -25,6 +25,15 @@ The first TDS frontend **extension** and the reference for `frontend-contract`. 
   shell in a loop (see `frontend-contract` astro.ts).
 - **Migration class names must be globally unique** across all modules — always
   prefix with `TimeTracker`.
+- **`start` / `stop` / `remove` must check their response** — they used to
+  `await` and discard it, which is worse here than a missing confirmation: a
+  stop that never reached the server leaves the timer running against the
+  user's own time, and a failed delete makes the row reappear on the next load
+  with no reason given. They report through `toast` from tds-shared
+  (`>=0.16.0`); the extension mounts no `ToastHost` (the host owns the one).
+  The manual form's **422 stays in-flow** (`.tds-alert--danger`, previously the
+  info hue): validation points at fields the user must still fix and must not
+  auto-dismiss, unlike a transient outcome.
 - Depends on the **published** `tds-frontend-contract` (`^0.2.0`): npm from GitHub
   Packages (`.npmrc` + `NPM_TOKEN`), Composer from the public VCS repo. **No local
   path repo** — Composer fatals on a missing path repo in CI. Same dual pipeline as
