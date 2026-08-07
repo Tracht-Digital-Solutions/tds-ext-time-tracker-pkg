@@ -139,7 +139,10 @@ export default function TimeTracker() {
   return (
     <div className="time-tracker space-y-6">
       <div className="time-tracker__timer rounded-xl border border-[color:var(--color-line)] p-4">
-        <div className="flex items-center justify-between gap-3">
+        {/* Wraps: the right-hand side nests a full-width text field next to
+            the start button, so this row cannot hold the week total as well
+            on a phone. */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm opacity-70">Diese Woche</p>
             <p className="text-2xl font-semibold">{(summary?.weekHours ?? 0).toLocaleString("de-DE")} h</p>
@@ -221,9 +224,12 @@ export default function TimeTracker() {
         ) : entries.length === 0 ? (
           <p className="text-sm opacity-70">Noch keine Einträge.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="tds-list">
             {entries.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 text-sm">
+              // `.tds-list__row` rather than a hand-rolled flex: five children
+              // (duration, chip, a timestamp range, a free-text note and a
+              // button) never fitted one un-wrappable line on a phone.
+              <li key={e.id} className="tds-list__row text-sm">
                 <span className="font-medium">{fmt(e.minutes)}</span>
                 {e.running ? <span className="chip chip--info">läuft</span> : null}
                 <span className="opacity-70">{e.started_at}{e.ended_at ? ` – ${e.ended_at}` : ""}</span>
