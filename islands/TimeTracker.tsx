@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Spinner, toast } from "@tracht-digital-solutions/tds-shared/components";
+import { apiFetch } from "@tracht-digital-solutions/tds-shared/api";
 
 interface Entry {
   id: number;
@@ -15,7 +16,7 @@ interface Summary {
   running: { id: number; started_at: string; note: string | null } | null;
 }
 
-const api = (path: string, init?: RequestInit) => fetch(path, { credentials: "include", ...init });
+const api = apiFetch;
 
 /** Minutes → "Xh Ym" (or "Ym"). */
 function fmt(minutes: number): string {

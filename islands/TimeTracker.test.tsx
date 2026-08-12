@@ -17,9 +17,18 @@ type Hit = { status?: number; body?: unknown };
 let handlers: Array<(url: string, init?: RequestInit) => Hit | undefined> = [];
 let calls: Array<{ url: string; method: string; body: unknown }> = [];
 
+
+/**
+ * Path + query of a request. The island calls an ABSOLUTE URL now (via
+ * `apiFetch`); a relative one would hit the product's own static host and come
+ * back as SPA-fallback HTML with a 200. Matching on the path keeps the route
+ * matchers below anchored.
+ */
+const pathOf = (url: string) => String(url).replace(/^https?:\/\/[^/]+/i, "");
+
 function respond(match: RegExp, body: unknown, status = 200, method?: string) {
   handlers.unshift((url, init) => {
-    if (!match.test(url)) return undefined;
+    if (!match.test(pathOf(url))) return undefined;
     if (method && (init?.method ?? "GET") !== method) return undefined;
     return { status, body };
   });
@@ -76,7 +85,7 @@ async function renderTracker(summary: unknown = { weekHours: 0, running: null },
   respond(/\/time\/summary$/, summary);
   respond(/\/time\/entries$/, { entries });
   render(<TimeTracker />);
-  await waitFor(() => expect(calls.some((c) => c.url === "/time/summary")).toBe(true));
+  await waitFor(() => expect(calls.some((c) => pathOf(c.url) === "/time/summary")).toBe(true));
   await screen.findByRole("heading", { name: "Letzte Einträge" });
   return user();
 }
@@ -86,8 +95,8 @@ const posts = () => calls.filter((c) => c.method === "POST");
 describe("loading", () => {
   it("fetches the summary and the entries with credentials", async () => {
     await renderTracker();
-    expect(calls.some((c) => c.url === "/time/summary")).toBe(true);
-    expect(calls.some((c) => c.url === "/time/entries")).toBe(true);
+    expect(calls.some((c) => pathOf(c.url) === "/time/summary")).toBe(true);
+    expect(calls.some((c) => pathOf(c.url) === "/time/entries")).toBe(true);
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     expect(fetchMock.mock.calls[0]![1]).toMatchObject({ credentials: "include" });
   });
@@ -155,30 +164,30 @@ describe("the running/stopped timer", () => {
     const u = await renderTracker();
     await u.type(screen.getByPlaceholderText("Woran arbeitest du?"), "  Feature X  ");
     await u.click(screen.getByRole("button", { name: /Timer starten/ }));
-    await waitFor(() => expect(posts().some((c) => c.url === "/time/start")).toBe(true));
-    expect(posts().find((c) => c.url === "/time/start")!.body).toEqual({ note: "Feature X" });
+    await waitFor(() => expect(posts().some((c) => pathOf(c.url) === "/time/start")).toBe(true));
+    expect(posts().find((c) => pathOf(c.url) === "/time/start")!.body).toEqual({ note: "Feature X" });
   });
 
   it("clears the note box and reloads after starting", async () => {
     const u = await renderTracker();
     await u.type(screen.getByPlaceholderText("Woran arbeitest du?"), "X");
     await u.click(screen.getByRole("button", { name: /Timer starten/ }));
-    await waitFor(() => expect(calls.filter((c) => c.url === "/time/summary")).toHaveLength(2));
+    await waitFor(() => expect(calls.filter((c) => pathOf(c.url) === "/time/summary")).toHaveLength(2));
     expect((screen.getByPlaceholderText("Woran arbeitest du?") as HTMLInputElement).value).toBe("");
   });
 
   it("stops the running timer and reloads", async () => {
     const u = await renderTracker({ weekHours: 1, running: { id: 5, started_at: "09:00", note: null } });
     await u.click(screen.getByRole("button", { name: /Timer stoppen/ }));
-    await waitFor(() => expect(posts().some((c) => c.url === "/time/stop")).toBe(true));
-    await waitFor(() => expect(calls.filter((c) => c.url === "/time/summary")).toHaveLength(2));
+    await waitFor(() => expect(posts().some((c) => pathOf(c.url) === "/time/stop")).toBe(true));
+    await waitFor(() => expect(calls.filter((c) => pathOf(c.url) === "/time/summary")).toHaveLength(2));
   });
 
   it("starts a timer with an empty note when none is typed", async () => {
     const u = await renderTracker();
     await u.click(screen.getByRole("button", { name: /Timer starten/ }));
-    await waitFor(() => expect(posts().some((c) => c.url === "/time/start")).toBe(true));
-    expect(posts().find((c) => c.url === "/time/start")!.body).toEqual({ note: "" });
+    await waitFor(() => expect(posts().some((c) => pathOf(c.url) === "/time/start")).toBe(true));
+    expect(posts().find((c) => pathOf(c.url) === "/time/start")!.body).toEqual({ note: "" });
   });
 });
 
@@ -195,21 +204,21 @@ describe("manual entries", () => {
     const u = await renderTracker();
     await fill(u, "", "");
     expect(await screen.findByText("Start und Ende sind erforderlich.")).toBeTruthy();
-    expect(posts().filter((c) => c.url === "/time/entries")).toHaveLength(0);
+    expect(posts().filter((c) => pathOf(c.url) === "/time/entries")).toHaveLength(0);
   });
 
   it("requires an end even when a start is given", async () => {
     const u = await renderTracker();
     await fill(u, "2026-07-27T09:00", "");
     expect(await screen.findByText("Start und Ende sind erforderlich.")).toBeTruthy();
-    expect(posts().filter((c) => c.url === "/time/entries")).toHaveLength(0);
+    expect(posts().filter((c) => pathOf(c.url) === "/time/entries")).toHaveLength(0);
   });
 
   it("posts a manual entry with a trimmed note", async () => {
     const u = await renderTracker();
     await fill(u, "2026-07-27T09:00", "2026-07-27T10:00", "  Notiz  ");
-    await waitFor(() => expect(posts().some((c) => c.url === "/time/entries")).toBe(true));
-    expect(posts().find((c) => c.url === "/time/entries")!.body).toEqual({
+    await waitFor(() => expect(posts().some((c) => pathOf(c.url) === "/time/entries")).toBe(true));
+    expect(posts().find((c) => pathOf(c.url) === "/time/entries")!.body).toEqual({
       started_at: "2026-07-27T09:00",
       ended_at: "2026-07-27T10:00",
       note: "Notiz",
@@ -238,7 +247,7 @@ describe("manual entries", () => {
   it("clears the form and reloads after a successful add", async () => {
     const u = await renderTracker();
     await fill(u, "2026-07-27T09:00", "2026-07-27T10:00", "Notiz");
-    await waitFor(() => expect(calls.filter((c) => c.url === "/time/summary")).toHaveLength(2));
+    await waitFor(() => expect(calls.filter((c) => pathOf(c.url) === "/time/summary")).toHaveLength(2));
     expect((screen.getByPlaceholderText("Notiz (optional)") as HTMLInputElement).value).toBe("");
   });
 
@@ -330,9 +339,9 @@ describe("the entry list", () => {
     await u.click(await screen.findByRole("button", { name: "Löschen" }));
     await waitFor(() => {
       const del = calls.find((c) => c.method === "DELETE");
-      expect(del?.url).toBe("/time/entries/1");
+      expect(pathOf(del!.url)).toBe("/time/entries/1");
     });
-    await waitFor(() => expect(calls.filter((c) => c.url === "/time/summary")).toHaveLength(2));
+    await waitFor(() => expect(calls.filter((c) => pathOf(c.url) === "/time/summary")).toHaveLength(2));
   });
 
   it("deletes the entry that was clicked, not the first one", async () => {
@@ -342,6 +351,6 @@ describe("the entry list", () => {
     ]);
     const rows = await screen.findAllByRole("listitem");
     await u.click(within(rows[1]!).getByRole("button", { name: "Löschen" }));
-    await waitFor(() => expect(calls.find((c) => c.method === "DELETE")?.url).toBe("/time/entries/2"));
+    await waitFor(() => expect(pathOf(calls.find((c) => c.method === "DELETE")!.url)).toBe("/time/entries/2"));
   });
 });

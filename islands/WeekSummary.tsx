@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@tracht-digital-solutions/tds-shared/components";
+import { apiFetch } from "@tracht-digital-solutions/tds-shared/api";
 
 interface Summary {
   weekHours: number;
@@ -16,7 +17,7 @@ export default function WeekSummary() {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    fetch("/time/summary", { credentials: "include" })
+    apiFetch("/time/summary")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
       .then((d: Summary) => setData(d))
       .catch(() => setFailed(true));
