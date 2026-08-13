@@ -12,6 +12,8 @@ The first TDS frontend **extension** and the reference for `frontend-contract`. 
 - `islands/*` — React islands + settings shells.
 - `php/src/TimeTrackerModule.php` — the backend `Module`.
 - `php/db/migrations/*` — Phinx migrations, class names **prefixed `TimeTracker`**.
+- `php/docs/api.php` — the route documentation the admin frontend's API
+  reference renders (`ApiDocSource`, see below).
 
 ## Gotchas
 
@@ -55,6 +57,19 @@ The first TDS frontend **extension** and the reference for `frontend-contract`. 
   Packages (`.npmrc` + `NPM_TOKEN`), Composer from the public VCS repo. **No local
   path repo** — Composer fatals on a missing path repo in CI. Same dual pipeline as
   `tds-ext-template-pkg` (annotated release tag; `npm install --no-package-lock`).
+
+- **The route docs are asserted against the routes, both ways.** This module
+  implements the contract's optional `ApiDocSource`: `php/docs/api.php` returns
+  one entry per route (summary, params, responses, required permission) and the
+  admin frontend's API reference joins it onto the introspected Slim routes by
+  `"<METHOD> <pattern>"`. Two consequences worth knowing:
+  - `pattern` must be the Slim pattern **verbatim**, inline regex included
+    (`/time/entries/{id:[0-9]+}`). A prettified path silently produces an
+    orphan doc *and* an undocumented route rather than an error.
+  - `php/tests/TimeTrackerApiDocsTest.php` asserts the documented set and the
+    registered set are the same set. Adding or renaming a route without
+    touching `docs/api.php` fails here — which is the point: a reference full
+    of confident, wrong detail is worse than the bare route list it replaced.
 
 ## Checkpoint status
 
@@ -101,6 +116,10 @@ Against an empty error body, `r.ok ? r.json() : { entries: [] }` and a bare
 `r.json()` end up identical, so the test would pass with the ok-check deleted.
 
 Verified by mutation: 16 deliberate breakages introduced, 16 caught.
+
+`composer test` (phpunit) additionally covers the backend Module:
+`php/tests/TimeTrackerModuleTest.php` (routes + RBAC) and
+`php/tests/TimeTrackerApiDocsTest.php` (route ↔ documentation parity).
 
 ## After a change
 

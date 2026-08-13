@@ -9,6 +9,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\App;
 use Tds\Ext\TimeTracker\Domain\TimeEntryRepository;
 use Tds\Frontend\Contract\AbstractModule;
+use Tds\Frontend\Contract\ApiDocSource;
 use Tds\Frontend\Contract\PermissionDef;
 use Tds\Frontend\Contract\UserContext;
 
@@ -20,7 +21,7 @@ use Tds\Frontend\Contract\UserContext;
  * core PDO. Migration class names are `TimeTracker*`-prefixed (in-process
  * auto-migrator loads every module's migrations into one process).
  */
-final class TimeTrackerModule extends AbstractModule
+final class TimeTrackerModule extends AbstractModule implements ApiDocSource
 {
     public function id(): string
     {
@@ -119,6 +120,17 @@ final class TimeTrackerModule extends AbstractModule
             new PermissionDef('time:read', 'Zeiten ansehen', 'time-tracker'),
             new PermissionDef('time:write', 'Zeiten erfassen', 'time-tracker'),
         ];
+    }
+
+    /**
+     * Route documentation for the admin frontend's API reference. Kept in its
+     * own file so the prose does not sit in the middle of the wiring.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function apiDocs(): array
+    {
+        return require __DIR__ . '/../docs/api.php';
     }
 
     // --- helpers ---------------------------------------------------------------
