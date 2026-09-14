@@ -26,6 +26,33 @@ function fmt(minutes: number): string {
 }
 
 /**
+ * A stored timestamp as German wall-clock parts: "2026-09-14 08:05:00" →
+ * `{ date: "14.09.2026", time: "08:05" }`. The API sends the DATETIME the way
+ * the database holds it — Berlin wall-clock, no zone — so this reads the digits
+ * instead of going through `Date`, which would shift them by the browser's
+ * offset. Anything else is `null` and gets shown as sent.
+ */
+function wallClock(value: string): { date: string; time: string } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(value);
+  return m ? { date: `${m[3]}.${m[2]}.${m[1]}`, time: `${m[4]}:${m[5]}` } : null;
+}
+
+/**
+ * "14.09.2026, 08:00 – 08:05": the date once, and a second time only when the
+ * entry crosses midnight. The list used to print the raw
+ * "2026-09-14 08:00:00 – 2026-09-14 08:05:00".
+ */
+function timeRange(start: string, end: string | null): string {
+  const s = wallClock(start);
+  if (!s) return end ? `${start} – ${end}` : start;
+  const from = `${s.date}, ${s.time}`;
+  if (!end) return from;
+  const e = wallClock(end);
+  if (!e) return `${from} – ${end}`;
+  return e.date === s.date ? `${from} – ${e.time}` : `${from} – ${e.date}, ${e.time}`;
+}
+
+/**
  * Full time-tracker page: a start/stop timer, a manual-entry form, and the
  * recent-entries list — all scoped to the logged-in user by the API. Relative
  * fetch with the session cookie, matching every other extension island.
@@ -179,8 +206,8 @@ export default function TimeTracker() {
                 className="field-boxed"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Woran arbeitest du?"
-                aria-label="Woran arbeitest du?"
+                placeholder="Woran arbeiten Sie?"
+                aria-label="Woran arbeiten Sie?"
               />
               <button
                 type="button"
@@ -195,7 +222,7 @@ export default function TimeTracker() {
           )}
         </div>
         {running ? (
-          <p className="text-xs opacity-70 mt-2">Läuft seit {running.started_at}{running.note ? ` · ${running.note}` : ""}</p>
+          <p className="text-xs opacity-70 mt-2">Läuft seit {timeRange(running.started_at, null)}{running.note ? ` · ${running.note}` : ""}</p>
         ) : null}
       </div>
 
@@ -234,7 +261,9 @@ export default function TimeTracker() {
       </details>
 
       <div className="tds-stack">
-        <h3>Letzte Einträge</h3>
+        {/* h2: the page's h1 is the host's "Zeiterfassung", and an h3 here
+            skipped a level. The panel resets heading sizes, so nothing moves. */}
+        <h2>Letzte Einträge</h2>
         {loadFailed ? (
           <p className="tds-alert tds-alert--danger" role="alert">
             Zeiten konnten nicht geladen werden — die API ist nicht erreichbar.
@@ -253,7 +282,7 @@ export default function TimeTracker() {
               <li key={e.id} className="tds-list__row text-sm">
                 <span className="font-medium">{fmt(e.minutes)}</span>
                 {e.running ? <span className="chip chip--info">läuft</span> : null}
-                <span className="opacity-70">{e.started_at}{e.ended_at ? ` – ${e.ended_at}` : ""}</span>
+                <span className="opacity-70">{timeRange(e.started_at, e.ended_at)}</span>
                 {e.note ? <span className="opacity-70">· {e.note}</span> : null}
                 <button type="button" className="btn btn-danger text-xs ml-auto" onClick={() => remove(e)}>Löschen</button>
               </li>

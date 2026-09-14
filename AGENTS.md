@@ -9,7 +9,9 @@ The first TDS frontend **extension** and the reference for `frontend-contract`. 
 - `pages/*.astro` — pages injected via the manifest's `routes` slot.
 - `widgets/*.astro` — dashboard widget shells (server component + embedded
   hydrated React island). Referenced by the `widgets` slot's `island`.
-- `islands/*` — React islands + settings shells.
+- `islands/*` — React islands. No settings shell: the placeholder one printed
+  "(Platzhalter)" onto the production settings page. Contribute a `settings`
+  section again only together with a real setting.
 - `php/src/TimeTrackerModule.php` — the backend `Module`.
 - `php/db/migrations/*` — Phinx migrations, class names **prefixed `TimeTracker`**.
 - `php/docs/api.php` — the route documentation the admin frontend's API

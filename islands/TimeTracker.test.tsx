@@ -157,11 +157,34 @@ describe("loading", () => {
   });
 });
 
+describe("timestamps", () => {
+  // The API sends DATETIME text the way the database holds it. The list used to
+  // print it raw — "2026-09-14 08:00:00 – 2026-09-14 08:05:00".
+  it("repeats the date for an entry that crosses midnight", async () => {
+    await renderTracker({ weekHours: 1, running: null }, [
+      { ...ENTRY, started_at: "2026-07-27 23:30:00", ended_at: "2026-07-28 00:15:00", minutes: 45 },
+    ]);
+    expect(await screen.findByText("27.07.2026, 23:30 – 28.07.2026, 00:15")).toBeTruthy();
+  });
+
+  it("reads the digits instead of shifting them through the browser's zone", async () => {
+    // `new Date("2026-07-27 09:00")` is local time in one engine and invalid in
+    // another; the database value is Berlin wall-clock either way.
+    await renderTracker({ weekHours: 1, running: { id: 5, started_at: "2026-07-27 09:00:00", note: null } });
+    expect(screen.getByText(/Läuft seit 27\.07\.2026, 09:00/)).toBeTruthy();
+  });
+
+  it("titles the list one level below the page heading", async () => {
+    await renderTracker();
+    expect(screen.getByRole("heading", { name: "Letzte Einträge", level: 2 })).toBeTruthy();
+  });
+});
+
 describe("the running/stopped timer", () => {
   it("offers a start control and a note box when nothing is running", async () => {
     await renderTracker();
     expect(screen.getByRole("button", { name: /Timer starten/ })).toBeTruthy();
-    expect(screen.getByPlaceholderText("Woran arbeitest du?")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Woran arbeiten Sie?")).toBeTruthy();
   });
 
   it("offers only a stop control while a timer runs", async () => {
@@ -169,7 +192,7 @@ describe("the running/stopped timer", () => {
     await renderTracker({ weekHours: 1, running: { id: 5, started_at: "09:00", note: null } });
     expect(screen.getByRole("button", { name: /Timer stoppen/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Timer starten/ })).toBeNull();
-    expect(screen.queryByPlaceholderText("Woran arbeitest du?")).toBeNull();
+    expect(screen.queryByPlaceholderText("Woran arbeiten Sie?")).toBeNull();
   });
 
   it("shows since when the running timer has been going", async () => {
@@ -189,7 +212,7 @@ describe("the running/stopped timer", () => {
 
   it("starts a timer with the trimmed note", async () => {
     const u = await renderTracker();
-    await u.type(screen.getByPlaceholderText("Woran arbeitest du?"), "  Feature X  ");
+    await u.type(screen.getByPlaceholderText("Woran arbeiten Sie?"), "  Feature X  ");
     await u.click(screen.getByRole("button", { name: /Timer starten/ }));
     await waitFor(() => expect(posts().some((c) => pathOf(c.url) === "/time/start")).toBe(true));
     expect(posts().find((c) => pathOf(c.url) === "/time/start")!.body).toEqual({ note: "Feature X" });
@@ -197,10 +220,10 @@ describe("the running/stopped timer", () => {
 
   it("clears the note box and reloads after starting", async () => {
     const u = await renderTracker();
-    await u.type(screen.getByPlaceholderText("Woran arbeitest du?"), "X");
+    await u.type(screen.getByPlaceholderText("Woran arbeiten Sie?"), "X");
     await u.click(screen.getByRole("button", { name: /Timer starten/ }));
     await waitFor(() => expect(calls.filter((c) => pathOf(c.url) === "/time/summary")).toHaveLength(2));
-    expect((screen.getByPlaceholderText("Woran arbeitest du?") as HTMLInputElement).value).toBe("");
+    expect((screen.getByPlaceholderText("Woran arbeiten Sie?") as HTMLInputElement).value).toBe("");
   });
 
   it("stops the running timer and reloads", async () => {
@@ -349,13 +372,13 @@ describe("the entry list", () => {
 
   it("shows the entry's time range and note", async () => {
     await renderTracker({ weekHours: 1.5, running: null }, [ENTRY]);
-    expect(await screen.findByText(/2026-07-27 09:00 – 2026-07-27 10:30/)).toBeTruthy();
+    expect(await screen.findByText("27.07.2026, 09:00 – 10:30")).toBeTruthy();
     expect(screen.getByText(/Refactoring/)).toBeTruthy();
   });
 
   it("omits the dash for an entry that has not ended", async () => {
     await renderTracker({ weekHours: 0, running: null }, [{ ...ENTRY, ended_at: null, running: true }]);
-    const text = (await screen.findByText(/2026-07-27 09:00/)).textContent!;
+    const text = (await screen.findByText(/27\.07\.2026, 09:00/)).textContent!;
     expect(text).not.toContain("–");
   });
 

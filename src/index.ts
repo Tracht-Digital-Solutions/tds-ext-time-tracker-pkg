@@ -3,7 +3,9 @@ import { defineExtension } from "@tracht-digital-solutions/tds-frontend-contract
 /**
  * Time-tracker extension — the first extension, and the reference for the
  * contract. It contributes a page (`/time`), a dashboard widget ("Diese
- * Woche"), a nav entry, a permission, a settings section, and i18n strings.
+ * Woche"), a nav entry, a permission, and i18n strings. No settings section:
+ * the one it had only printed a placeholder onto the production settings page,
+ * and `tds-ext-template-pkg` already demonstrates that slot.
  *
  * `island` / `entrypoint` are package subpaths the host's Astro/Vite resolves
  * (see this package's `exports`). The widget entrypoint is an `.astro` shell
@@ -38,14 +40,6 @@ export default defineExtension({
       permission: "time:read",
       dataEndpoint: "/time/summary",
       order: 10,
-    },
-  ],
-  settings: [
-    {
-      id: "time",
-      label: "Zeiterfassung",
-      island: "@tracht-digital-solutions/tds-ext-time-tracker/islands/Settings.astro",
-      order: 20,
     },
   ],
   routes: [

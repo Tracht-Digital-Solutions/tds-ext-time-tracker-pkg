@@ -5,9 +5,10 @@ implementation** of `frontend-contract`. Two halves in one repo, like the contra
 
 - **Frontend** (`@tracht-digital-solutions/tds-ext-time-tracker`, GitHub Packages) —
   a default-exported `ExtensionManifest` (`src/index.ts`) plus the `.astro` pages
-  / widgets / settings and the React islands they hydrate (`pages/`, `widgets/`,
+  / widgets and the React islands they hydrate (`pages/`, `widgets/`,
   `islands/`). Contributes: the `/time` page, the "Diese Woche" dashboard widget,
-  a nav entry, the `time:read` permission, a settings section, DE/EN i18n.
+  a nav entry, the `time:read` permission and DE/EN i18n. No settings section —
+  there is nothing to set yet, and `tds-ext-template-pkg` shows that slot.
 - **Backend** (`tracht-digital-solutions/tds-ext-time-tracker`, Composer) — a
   `TimeTrackerModule` (`php/src/`) mounting `/time/*` (incl. the widget's
   `/time/summary` dataEndpoint) + its Phinx migrations (`php/db/migrations`,
