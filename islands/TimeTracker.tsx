@@ -39,14 +39,24 @@ export default function TimeTracker() {
   const [manualNote, setManualNote] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = async () => {
-    const [s, e] = await Promise.all([
-      api("/time/summary").then((r) => (r.ok ? r.json() : null)),
-      api("/time/entries").then((r) => (r.ok ? r.json() : { entries: [] })),
-    ]);
-    setSummary(s);
-    setEntries(e.entries ?? []);
+    try {
+      const [s, e] = await Promise.all([
+        api("/time/summary").then((r) => (r.ok ? r.json() : null)),
+        api("/time/entries").then((r) => (r.ok ? r.json() : { entries: [] })),
+      ]);
+      setSummary(s);
+      setEntries(e.entries ?? []);
+      setLoadFailed(false);
+    } catch {
+      // apiFetch rejects when a request never reaches the API; uncaught, the
+      // entry list stayed on its spinner for good. Entries already on screen
+      // stay there.
+      setLoadFailed(true);
+      setEntries((current) => current ?? []);
+    }
   };
 
   useEffect(() => {
@@ -104,8 +114,13 @@ export default function TimeTracker() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ started_at: manualStart, ended_at: manualEnd, note: manualNote.trim() }),
-    });
+    }).catch(() => null);
     setBusy(false);
+    if (res === null) {
+      // The form keeps what was typed.
+      toast.danger("Eintrag konnte nicht gespeichert werden — die API ist nicht erreichbar.");
+      return;
+    }
     if (res.ok) {
       setManualStart("");
       setManualEnd("");
@@ -220,6 +235,11 @@ export default function TimeTracker() {
 
       <div className="tds-stack">
         <h3>Letzte Einträge</h3>
+        {loadFailed ? (
+          <p className="tds-alert tds-alert--danger" role="alert">
+            Zeiten konnten nicht geladen werden — die API ist nicht erreichbar.
+          </p>
+        ) : null}
         {entries === null ? (
           <p><Spinner /></p>
         ) : entries.length === 0 ? (
