@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Spinner, toast } from "@tracht-digital-solutions/tds-shared/components";
 import { apiFetch } from "@tracht-digital-solutions/tds-shared/api";
+import { AnimatedItem, AnimatedList } from "@tracht-digital-solutions/tds-shared/motion/react";
 
 interface Entry {
   id: number;
@@ -274,20 +275,24 @@ export default function TimeTracker() {
         ) : entries.length === 0 ? (
           <p className="text-sm opacity-70">Noch keine Einträge.</p>
         ) : (
-          <ul className="tds-list">
+          // A stopped timer, a manual entry and a delete all change this list;
+          // the rows fade in and out and the rest close the gap. A plain
+          // comment, not {/* … */}: this is an expression position, not JSX
+          // children.
+          <AnimatedList className="tds-list">
             {entries.map((e) => (
               // `.tds-list__row` rather than a hand-rolled flex: five children
               // (duration, chip, a timestamp range, a free-text note and a
               // button) never fitted one un-wrappable line on a phone.
-              <li key={e.id} className="tds-list__row text-sm">
+              <AnimatedItem key={e.id} className="tds-list__row text-sm">
                 <span className="font-medium">{fmt(e.minutes)}</span>
                 {e.running ? <span className="chip chip--info">läuft</span> : null}
                 <span className="opacity-70">{timeRange(e.started_at, e.ended_at)}</span>
                 {e.note ? <span className="opacity-70">· {e.note}</span> : null}
                 <button type="button" className="btn btn-danger text-xs ml-auto" onClick={() => remove(e)}>Löschen</button>
-              </li>
+              </AnimatedItem>
             ))}
-          </ul>
+          </AnimatedList>
         )}
       </div>
     </div>

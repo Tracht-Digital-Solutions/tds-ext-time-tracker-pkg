@@ -19,6 +19,12 @@ The first TDS frontend **extension** and the reference for `frontend-contract`. 
 
 ## Gotchas
 
+- **Motion kommt aus `tds-shared/motion/react` (peer `>=0.38.7`).** Die
+  Eintragsliste ist eine `AnimatedList`: ein gestoppter Timer, ein manueller
+  Eintrag und ein Loeschen blenden die Zeile ein bzw. aus, die uebrigen ruecken
+  nach. Kommentare in Ausdruckposition (`) : (`) als `//`, nicht `{/* */}` —
+  das ist ein Parse-Fehler, den erst der Testlauf zeigt.
+
 - **Call the API with `apiFetch` from `@tracht-digital-solutions/tds-shared/api`,
   never a relative `fetch`.** Every island used to define its own
   `const api = (path, init) => fetch(path, { credentials: "include", ...init })`
