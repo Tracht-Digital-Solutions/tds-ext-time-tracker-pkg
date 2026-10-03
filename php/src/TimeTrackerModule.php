@@ -152,7 +152,10 @@ final class TimeTrackerModule extends AbstractModule implements ApiDocSource
             return null;
         }
         try {
-            return new \DateTimeImmutable($value);
+            // Into the server's zone (Europe/Berlin, like the DB session): a
+            // client `…Z` value was stored as UTC wall-clock time and then
+            // compared with Berlin NOW() — an hour or two off.
+            return (new \DateTimeImmutable($value))->setTimezone(new \DateTimeZone(date_default_timezone_get()));
         } catch (\Throwable) {
             return null;
         }
