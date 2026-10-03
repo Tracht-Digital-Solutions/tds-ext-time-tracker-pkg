@@ -12,6 +12,7 @@ use Tds\Frontend\Contract\AbstractModule;
 use Tds\Frontend\Contract\ApiDocSource;
 use Tds\Frontend\Contract\PermissionDef;
 use Tds\Frontend\Contract\UserContext;
+use Tds\Frontend\Contract\ModuleHttp;
 
 /**
  * Backend half of the time-tracker extension. Real time tracking scoped to the
@@ -23,6 +24,8 @@ use Tds\Frontend\Contract\UserContext;
  */
 final class TimeTrackerModule extends AbstractModule implements ApiDocSource
 {
+    use ModuleHttp;
+
     public function id(): string
     {
         return 'time-tracker';
@@ -167,9 +170,4 @@ final class TimeTrackerModule extends AbstractModule implements ApiDocSource
         return $v === '' ? null : mb_substr($v, 0, $limit);
     }
 
-    private static function json(Response $res, mixed $data, int $status = 200): Response
-    {
-        $res->getBody()->write(json_encode($data, JSON_THROW_ON_ERROR));
-        return $res->withStatus($status)->withHeader('Content-Type', 'application/json');
-    }
 }
