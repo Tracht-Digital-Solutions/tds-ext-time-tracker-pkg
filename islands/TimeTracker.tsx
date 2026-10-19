@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Spinner, toast } from "@tracht-digital-solutions/tds-shared/components";
-import { apiFetch } from "@tracht-digital-solutions/tds-shared/api";
+import { Alert, ConfirmDialog, Spinner, toast } from "@tracht-digital-solutions/tds-shared/components";
+import { apiFetch, sendJson } from "@tracht-digital-solutions/tds-shared/api";
 import { AnimatedItem, AnimatedList } from "@tracht-digital-solutions/tds-shared/motion/react";
 
 interface Entry {
@@ -16,8 +16,6 @@ interface Summary {
   weekHours: number;
   running: { id: number; started_at: string; note: string | null } | null;
 }
-
-const api = apiFetch;
 
 /** Minutes → "Xh Ym" (or "Ym"). */
 function fmt(minutes: number): string {
@@ -68,12 +66,14 @@ export default function TimeTracker() {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  // A logged entry is billed time; deleting one is confirmed first.
+  const [pendingDelete, setPendingDelete] = useState<Entry | null>(null);
 
   const load = async () => {
     try {
       const [s, e] = await Promise.all([
-        api("/time/summary").then((r) => (r.ok ? r.json() : null)),
-        api("/time/entries").then((r) => (r.ok ? r.json() : { entries: [] })),
+        apiFetch("/time/summary").then((r) => (r.ok ? r.json() : null)),
+        apiFetch("/time/entries").then((r) => (r.ok ? r.json() : { entries: [] })),
       ]);
       setSummary(s);
       setEntries(e.entries ?? []);
@@ -99,11 +99,7 @@ export default function TimeTracker() {
   const start = async () => {
     setBusy(true);
     try {
-      const res = await api("/time/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: note.trim() }),
-      });
+      const res = await sendJson("/time/start", "POST", { note: note.trim() });
       if (res.ok) {
         setNote("");
         toast.success("Timer gestartet.");
@@ -121,7 +117,7 @@ export default function TimeTracker() {
   const stop = async () => {
     setBusy(true);
     try {
-      const res = await api("/time/stop", { method: "POST" });
+      const res = await apiFetch("/time/stop", { method: "POST" });
       if (res.ok) toast.success("Timer gestoppt.");
       else toast.danger(`Timer konnte nicht gestoppt werden (HTTP ${res.status}) — er läuft weiter.`);
     } catch {
@@ -138,11 +134,7 @@ export default function TimeTracker() {
       return;
     }
     setBusy(true);
-    const res = await api("/time/entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ started_at: manualStart, ended_at: manualEnd, note: manualNote.trim() }),
-    }).catch(() => null);
+    const res = await sendJson("/time/entries", "POST", { started_at: manualStart, ended_at: manualEnd, note: manualNote.trim() }).catch(() => null);
     setBusy(false);
     if (res === null) {
       // The form keeps what was typed.
@@ -167,8 +159,9 @@ export default function TimeTracker() {
   };
 
   const remove = async (e: Entry) => {
+    setPendingDelete(null);
     try {
-      const res = await api(`/time/entries/${e.id}`, { method: "DELETE" });
+      const res = await apiFetch(`/time/entries/${e.id}`, { method: "DELETE" });
       if (res.ok) toast.success("Eintrag gelöscht.");
       else toast.danger(`Löschen fehlgeschlagen (HTTP ${res.status}).`);
     } catch {
@@ -258,7 +251,7 @@ export default function TimeTracker() {
         {/* Only validation reaches this now (the transient outcomes are
             toasts), so it is a failure and gets the danger hue — it used to
             render "Ende muss nach dem Start liegen." in the info blue. */}
-        {status ? <p className="tds-alert tds-alert--danger mt-2" role="alert">{status}</p> : null}
+        {status ? <Alert className="mt-2">{status}</Alert> : null}
       </details>
 
       <div className="tds-stack">
@@ -266,9 +259,9 @@ export default function TimeTracker() {
             skipped a level. The panel resets heading sizes, so nothing moves. */}
         <h2>Letzte Einträge</h2>
         {loadFailed ? (
-          <p className="tds-alert tds-alert--danger" role="alert">
+          <Alert>
             Zeiten konnten nicht geladen werden — die API ist nicht erreichbar.
-          </p>
+          </Alert>
         ) : null}
         {entries === null ? (
           <p><Spinner /></p>
@@ -289,12 +282,20 @@ export default function TimeTracker() {
                 {e.running ? <span className="chip chip--info">läuft</span> : null}
                 <span className="opacity-70">{timeRange(e.started_at, e.ended_at)}</span>
                 {e.note ? <span className="opacity-70">· {e.note}</span> : null}
-                <button type="button" className="btn btn-danger text-xs ml-auto" onClick={() => remove(e)}>Löschen</button>
+                <button type="button" className="btn btn-danger text-xs ml-auto" onClick={() => setPendingDelete(e)}>Löschen</button>
               </AnimatedItem>
             ))}
           </AnimatedList>
         )}
       </div>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Eintrag löschen?"
+        message={pendingDelete ? `${fmt(pendingDelete.minutes)} · ${timeRange(pendingDelete.started_at, pendingDelete.ended_at)}` : null}
+        confirmLabel="Löschen"
+        onConfirm={() => pendingDelete && void remove(pendingDelete)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

@@ -396,6 +396,8 @@ describe("the entry list", () => {
   it("deletes an entry by id and reloads", async () => {
     const u = await renderTracker({ weekHours: 1.5, running: null }, [ENTRY]);
     await u.click(await screen.findByRole("button", { name: "Löschen" }));
+    // Deleting logged time is confirmed first (tds-shared ConfirmDialog).
+    await u.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Löschen" }));
     await waitFor(() => {
       const del = calls.find((c) => c.method === "DELETE");
       expect(pathOf(del!.url)).toBe("/time/entries/1");
@@ -410,6 +412,7 @@ describe("the entry list", () => {
     ]);
     const rows = await screen.findAllByRole("listitem");
     await u.click(within(rows[1]!).getByRole("button", { name: "Löschen" }));
+    await u.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Löschen" }));
     await waitFor(() => expect(pathOf(calls.find((c) => c.method === "DELETE")!.url)).toBe("/time/entries/2"));
   });
 });
